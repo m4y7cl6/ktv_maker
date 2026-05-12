@@ -1,0 +1,23 @@
+services:
+  ktv-maker:
+    build: .
+    container_name: ktv-maker
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output          # 輸出 MP4 掛載到本機
+      - ./demucs_cache:/root/.cache     # Demucs / Whisper 模型快取
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  demucs_cache:

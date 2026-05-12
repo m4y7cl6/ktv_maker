@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KTV Maker · AI 去人聲工具</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #07071a;
+      --card-bg:      rgba(255,255,255,0.04);
+      --border:       rgba(255,255,255,0.08);
+      --border-focus: rgba(168,85,247,0.6);
+      --purple:       #a855f7;
+      --pink:         #ec4899;
+      --grad:         linear-gradient(135deg, #a855f7, #ec4899);
+      --text:         #f0f0ff;
+      --muted:        #6666aa;
+      --success:      #22c55e;
+      --error:        #f87171;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+
+    /* 背景光球 */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.14;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 550px; height: 550px;
+      background: #7c3aed;
+      top: -120px; left: -120px;
+      animation: orb1 22s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 450px; height: 450px;
+      background: #db2777;
+      bottom: -120px; right: -120px;
+      animation: orb2 28s ease-in-out infinite alternate;
+    }
+    @keyframes orb1 { to { transform: translate(220px, 220px); } }
+    @keyframes orb2 { to { transform: translate(-200px, -160px); } }
+
+    .container {
+      width: 100%;
+      max-width: 580px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    header { text-align: center; margin-bottom: 2.5rem; }
+
+    .logo {
+      font-size: 4rem;
+      line-height: 1;
+      margin-bottom: 0.6rem;
+      display: inline-block;
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-8px); }
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 2rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    /* ── Input ── */
+    .field-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 0.6rem;
+    }
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .yt-icon {
+      position: absolute;
+      left: 1rem;
+      font-size: 1.1rem;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    #url-input {
+      width: 100%;
+      padding: 0.85rem 1rem 0.85rem 2.9rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #url-input::placeholder { color: var(--muted); }
+    #url-input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+    }
+    #url-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Start Button ── */
+    #start-btn {
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.95rem;
+      background: var(--grad);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    #start-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%);
+      transform: translateX(-100%);
+      transition: transform 0.4s;
+    }
+    #start-btn:hover:not(:disabled)::after { transform: translateX(100%); }
+    #start-btn:hover:not(:disabled) {
+      box-shadow: 0 4px 20px rgba(168,85,247,0.4);
+    }
+    #start-btn:active:not(:disabled) { transform: scale(0.98); }
+    #start-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Progress ── */
+    #progress-section { display: none; margin-top: 1.75rem; }
+
+    .steps {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 1.5rem;
+      justify-content: space-between;
+    }
+    .step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .step-dot {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      transition: all 0.4s ease;
+      background: transparent;
+    }
+    .step-name {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.3;
+      transition: color 0.4s;
+    }
+    .step.active .step-dot {
+      background: var(--grad);
+      border-color: transparent;
+      color: #fff;
+      animation: step-glow 1.6s ease-in-out infinite;
+    }
+    .step.active .step-name { color: var(--purple); font-weight: 600; }
+    @keyframes step-glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(168,85,247,0.5); }
+      50%       { box-shadow: 0 0 22px rgba(168,85,247,0.9); }
+    }
+    .step.done .step-dot {
+      background: var(--success);
+      border-color: transparent;
+      color: #fff;
+    }
+    .step.done .step-name { color: var(--success); }
+
+    /* 步驟之間的連接線 */
+    .step-line {
+      flex: 0.4;
+      height: 2px;
+      background: var(--border);
+      margin-top: 19px;
+      border-radius: 2px;
+      transition: background 0.4s;
+      align-self: flex-start;
+    }
+    .step-line.done { background: var(--success); }
+
+    /* Progress Bar */
+    .progress-track {
+      height: 7px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 0.65rem;
+    }
+    #progress-fill {
+      height: 100%;
+      background: var(--grad);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.7s ease;
+      position: relative;
+    }
+    #progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; right: -20px;
+      width: 50px; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
+      animation: shimmer 1.8s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0%   { opacity: 0; }
+      50%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #progress-msg { font-size: 0.84rem; color: var(--muted); }
+    #progress-pct {
+      font-size: 0.84rem;
+      font-weight: 700;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Error ── */
+    #error-box {
+      display: none;
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 10px;
+      font-size: 0.84rem;
+      color: var(--error);
+      line-height: 1.5;
+    }
+
+    /* ── Result ── */
+    #result-section {
+      display: none;
+      margin-top: 1.75rem;
+      text-align: center;
+    }
+    .result-emoji {
+      font-size: 3.2rem;
+      display: inline-block;
+      animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes pop {
+      0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0deg);   opacity: 1; }
+    }
+    .result-title {
+      margin: 0.7rem 0 0.2rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    #result-filename {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+      word-break: break-all;
+    }
+    #download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 2.2rem;
+      background: var(--grad);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+    }
+    #download-btn:hover {
+      opacity: 0.9;
+      box-shadow: 0 4px 20px rgba(168,85,247,0.4);
+    }
+    #download-btn:active { transform: scale(0.97); }
+
+    .reset-link {
+      display: block;
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .reset-link:hover { color: var(--text); }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 2rem;
+      font-size: 0.73rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.2px;
+    }
+    footer span {
+      margin: 0 0.3rem;
+      opacity: 0.5;
+    }
+
+    /* ── Shake animation ── */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-7px); }
+      40%       { transform: translateX(7px); }
+      60%       { transform: translateX(-4px); }
+      80%       { transform: translateX(4px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">🎤</div>
+      <h1>KTV Maker</h1>
+      <p class="subtitle">YouTube 下載 &nbsp;·&nbsp; AI 去人聲 &nbsp;·&nbsp; 字幕燒入</p>
+    </header>
+
+    <div class="card">
+      <!-- Input -->
+      <label class="field-label" for="url-input">YouTube 網址</label>
+      <div class="input-wrap">
+        <span class="yt-icon">▶️</span>
+        <input
+          id="url-input"
+          type="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <button id="start-btn" onclick="startProcess()">開始製作 KTV</button>
+
+      <!-- Progress -->
+      <div id="progress-section">
+        <div class="steps" id="steps-row">
+          <div class="step" id="step-1">
+            <div class="step-dot">1</div>
+            <div class="step-name">下載影片</div>
+          </div>
+          <div class="step-line" id="line-1"></div>
+          <div class="step" id="step-2">
+            <div class="step-dot">2</div>
+            <div class="step-name">人聲分離</div>
+          </div>
+          <div class="step-line" id="line-2"></div>
+          <div class="step" id="step-3">
+            <div class="step-dot">3</div>
+            <div class="step-name">字幕識別</div>
+          </div>
+          <div class="step-line" id="line-3"></div>
+          <div class="step" id="step-4">
+            <div class="step-dot">4</div>
+            <div class="step-name">合成輸出</div>
+          </div>
+        </div>
+
+        <div class="progress-track">
+          <div id="progress-fill"></div>
+        </div>
+        <div class="progress-info">
+          <span id="progress-msg">準備中...</span>
+          <span id="progress-pct">0%</span>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="error-box"></div>
+
+      <!-- Result -->
+      <div id="result-section">
+        <div class="result-emoji">🎉</div>
+        <div class="result-title">製作完成！</div>
+        <div id="result-filename"></div>
+        <a id="download-btn" href="#" download>⬇&nbsp; 下載 KTV MP4</a>
+        <span class="reset-link" onclick="resetUI()">製作另一首 →</span>
+      </div>
+    </div>
+
+    <footer>
+      Demucs htdemucs <span>·</span> faster-whisper large-v3 <span>·</span> FFmpeg 1080p
+    </footer>
+  </div>
+
+  <script>
+    let evtSrc = null;
+
+    function startProcess() {
+      const input = document.getElementById('url-input');
+      const url = input.value.trim();
+
+      if (!url) { shake(input); return; }
+      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+        showError('請輸入有效的 YouTube 網址');
+        return;
+      }
+
+      setLoading(true);
+      hideError();
+
+      fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.job_id) throw new Error('伺服器未回傳 job_id');
+          showProgress();
+          listenSSE(data.job_id);
+        })
+        .catch(err => {
+          setLoading(false);
+          showError('連線失敗：' + err.message);
+        });
+    }
+
+    function listenSSE(jobId) {
+      evtSrc = new EventSource('/api/progress/' + jobId);
+
+      evtSrc.onmessage = (e) => {
+        const job = JSON.parse(e.data);
+        updateProgress(job);
+
+        if (job.status === 'done') {
+          evtSrc.close();
+          setLoading(false);
+          showResult(jobId, job.filename);
+        } else if (job.status === 'error') {
+          evtSrc.close();
+          setLoading(false);
+          showError(job.message || '處理失敗，請查看伺服器日誌');
+        }
+      };
+
+      evtSrc.onerror = () => {
+        evtSrc.close();
+        setLoading(false);
+        showError('與伺服器失去連線，請重新整理頁面');
+      };
+    }
+
+    function updateProgress(job) {
+      const pct = job.progress || 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-pct').textContent = pct + '%';
+      document.getElementById('progress-msg').textContent = job.message || '';
+
+      // Step 1: 0–29%  Step 2: 30–64%  Step 3: 65–79%  Step 4: 80–99%
+      const thresholds = [0, 30, 65, 80, 100];
+      const current = pct < 30 ? 1 : pct < 65 ? 2 : pct < 80 ? 3 : pct < 100 ? 4 : 5;
+
+      for (let i = 1; i <= 4; i++) {
+        const state = i < current ? 'done' : i === current ? 'active' : '';
+        setStep(i, state);
+      }
+      for (let i = 1; i <= 3; i++) {
+        const line = document.getElementById('line-' + i);
+        line.className = 'step-line' + (i < current ? ' done' : '');
+      }
+    }
+
+    function setStep(n, state) {
+      const el = document.getElementById('step-' + n);
+      el.className = 'step' + (state ? ' ' + state : '');
+      const dot = el.querySelector('.step-dot');
+      dot.textContent = state === 'done' ? '✓' : n;
+    }
+
+    function showProgress() {
+      document.getElementById('progress-section').style.display = 'block';
+    }
+
+    function showResult(jobId, filename) {
+      document.getElementById('result-section').style.display = 'block';
+      document.getElementById('result-filename').textContent = filename || '';
+      document.getElementById('download-btn').href = '/api/download/' + jobId;
+    }
+
+    function setLoading(on) {
+      const btn = document.getElementById('start-btn');
+      const inp = document.getElementById('url-input');
+      btn.disabled = on;
+      inp.disabled = on;
+      btn.textContent = on ? '處理中...' : '開始製作 KTV';
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('error-box');
+      box.textContent = '⚠ ' + msg;
+      box.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('error-box').style.display = 'none';
+    }
+
+    function resetUI() {
+      if (evtSrc) evtSrc.close();
+      const inp = document.getElementById('url-input');
+      inp.value = '';
+      inp.disabled = false;
+      setLoading(false);
+      document.getElementById('progress-section').style.display = 'none';
+      document.getElementById('result-section').style.display = 'none';
+      document.getElementById('progress-fill').style.width = '0%';
+      document.getElementById('progress-pct').textContent = '0%';
+      document.getElementById('progress-msg').textContent = '準備中...';
+      for (let i = 1; i <= 4; i++) setStep(i, '');
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById('line-' + i).className = 'step-line';
+      }
+      hideError();
+    }
+
+    function shake(el) {
+      el.style.animation = 'none';
+      void el.offsetHeight;
+      el.style.animation = 'shake 0.4s ease';
+    }
+
+    document.getElementById('url-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') startProcess();
+    });
+  </script>
+</body>
+</html>

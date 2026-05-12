@@ -1,0 +1,37 @@
+# ── 下載 ──────────────────────────────
+yt-dlp>=2024.1.0
+
+# ── AI 人聲分離 ────────────────────────
+demucs>=4.0.1
+torch>=2.1.0           # 需配合 CUDA 版本安裝（見下方說明）
+torchaudio>=2.1.0
+
+# ── AI 字幕生成 ────────────────────────
+faster-whisper>=1.0.0  # 比官方 Whisper 快 4x，記憶體更省
+opencc-python-reimplemented>=0.1.7   # 簡體 → 繁體轉換
+
+# ── Web API ────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+
+# ── 工具 ──────────────────────────────
+pydantic>=2.0.0
+
+# ══════════════════════════════════════
+# PyTorch GPU 安裝（擇一執行）：
+#
+# CUDA 12.1：
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# CUDA 11.8：
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# CPU only（速度慢 10x，建議僅測試用）：
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+# ══════════════════════════════════════
+
+# 系統需另外安裝（非 pip）：
+# - ffmpeg >= 6.0      （sudo apt install ffmpeg）
+# - libass-dev         （字幕渲染，sudo apt install libass-dev）
+# - fonts-noto-cjk     （中文字型，sudo apt install fonts-noto-cjk）
