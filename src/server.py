@@ -128,7 +128,5 @@ async def run_pipeline(job_id: str, url: str):
         detail = (e.stderr or b"").decode(errors="replace").strip()
         msg = f"指令失敗（exit {e.returncode}）" + (f"：{detail}" if detail else "")
         jobs[job_id].update(status="error", progress=0, message=msg)
-        raise
     except Exception as e:
         jobs[job_id].update(status="error", progress=0, message=f"錯誤：{e}")
-        raise

@@ -171,32 +171,45 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
             "請先安裝：pip install faster-whisper opencc-python-reimplemented"
         )
 
-    # 使用原始音訊（含人聲）識別效果較好
-    model = WhisperModel("large-v3", device="cuda", compute_type="int8_float16")
-    # 若無 GPU：
-    # model = WhisperModel("medium", device="cpu", compute_type="int8")
-
-    segments, info = model.transcribe(
-        str(audio_path),
-        language="zh",
-        beam_size=5,
-        vad_filter=True,          # 過濾靜音段
-        vad_parameters=dict(min_silence_duration_ms=500),
-    )
-
-    # 簡體 → 繁體
     cc = opencc.OpenCC("s2tw")
-
     srt_path = job_dir / "subtitle_whisper.srt"
-    with open(srt_path, "w", encoding="utf-8") as f:
-        for i, seg in enumerate(segments, 1):
-            text = cc.convert(seg.text.strip())
-            f.write(f"{i}\n")
-            f.write(f"{_fmt_time(seg.start)} --> {_fmt_time(seg.end)}\n")
-            f.write(f"{text}\n\n")
 
-    print(f"  ✓ Whisper 字幕生成完成：{srt_path}")
-    return srt_path
+    # GPU 優先，OOM 時自動降回 CPU
+    configs = [
+        ("large-v3", "cuda",  "int8_float16"),
+        ("medium",   "cuda",  "int8_float16"),
+        ("medium",   "cpu",   "int8"),
+    ]
+    last_err = None
+    for model_name, device, compute in configs:
+        try:
+            print(f"  → 嘗試 Whisper {model_name} on {device} ({compute})")
+            model = WhisperModel(model_name, device=device, compute_type=compute)
+            segments, _ = model.transcribe(
+                str(audio_path),
+                language="zh",
+                beam_size=5,
+                vad_filter=True,
+                vad_parameters=dict(min_silence_duration_ms=500),
+            )
+            with open(srt_path, "w", encoding="utf-8") as f:
+                for i, seg in enumerate(segments, 1):
+                    text = cc.convert(seg.text.strip())
+                    f.write(f"{i}\n")
+                    f.write(f"{_fmt_time(seg.start)} --> {_fmt_time(seg.end)}\n")
+                    f.write(f"{text}\n\n")
+            print(f"  ✓ Whisper 字幕生成完成（{model_name} / {device}）：{srt_path}")
+            return srt_path
+        except RuntimeError as e:
+            print(f"  ⚠ {model_name}/{device} 失敗：{e}，嘗試下一個設定...")
+            last_err = e
+            try:
+                import torch
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
+
+    raise RuntimeError(f"Whisper 所有設定均失敗：{last_err}")
 
 
 def _fmt_time(seconds: float) -> str:
