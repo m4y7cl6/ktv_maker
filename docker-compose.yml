@@ -6,7 +6,7 @@ services:
       - "8000:8000"
     volumes:
       - ./output:/app/output          # 輸出 MP4 掛載到本機
-      - ./demucs_cache:/root/.cache     # Demucs / Whisper 模型快取
+      - model_cache:/app/model_cache  # Demucs / Whisper 模型快取（持久化）
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - PYTHONUNBUFFERED=1
@@ -20,4 +20,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  demucs_cache:
+  model_cache:

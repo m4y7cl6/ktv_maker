@@ -6,6 +6,7 @@ KTV Maker Web API
 import asyncio
 import uuid
 import json
+import subprocess
 from pathlib import Path
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse

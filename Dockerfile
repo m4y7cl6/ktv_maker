@@ -2,15 +2,18 @@ FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+# 模型快取統一放到 /app/model_cache，再用 volume 掛載
+ENV TORCH_HOME=/app/model_cache/torch
+ENV HF_HOME=/app/model_cache/huggingface
+ENV XDG_CACHE_HOME=/app/model_cache
 
 # ── 系統套件 ──────────────────────────────────────────────
-RUN apt-get update && apt-get install -y \
-    python3.11 python3-pip python3.11-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3-pip \
     ffmpeg \
-    libass-dev \
+    libass9 \
     fonts-noto-cjk \
     nodejs \
-    git curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /usr/bin/python3.11 /usr/bin/python && \
@@ -29,12 +32,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ── 應用程式 ──────────────────────────────────────────────
 COPY src/ ./src/
-
-# 預下載 Demucs htdemucs 模型（避免首次執行時等待）
-RUN python -c "import demucs.pretrained; demucs.pretrained.get_model('htdemucs')" || true
-
-# 預下載 Whisper large-v3 模型
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('large-v3', device='cpu')" || true
 
 EXPOSE 8000
 
