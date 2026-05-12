@@ -129,6 +129,14 @@ def separate_vocals(audio_path: Path, job_dir: Path) -> Path:
         str(audio_path)
     ], check=True)
 
+    # 釋放 Demucs 佔用的 VRAM，避免 Whisper 載入時 OOM
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+
     # Demucs 輸出路徑規則：
     # demucs_out/htdemucs/<stem_name>/no_vocals.wav
     stem_name = audio_path.stem
@@ -164,7 +172,7 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
         )
 
     # 使用原始音訊（含人聲）識別效果較好
-    model = WhisperModel("large-v3", device="cuda", compute_type="float16")
+    model = WhisperModel("large-v3", device="cuda", compute_type="int8_float16")
     # 若無 GPU：
     # model = WhisperModel("medium", device="cpu", compute_type="int8")
 
