@@ -225,36 +225,33 @@ def _fmt_time(seconds: float) -> str:
 def compose_output(
     video_path:        Path,
     instrumental_path: Path,
-    subtitle_path:     Path,
+    subtitle_path:     Path | None,
     title:             str,
     job_dir:           Path,
     vocal_mix:         float = 0.0,
     vocals_path:       Path | None = None,
+    subtitle_mode:     str = "auto",  # "auto" | "none"
 ) -> Path:
     """
     使用 FFmpeg 將無聲影片、伴奏音訊、SRT 字幕合成為最終 KTV MP4。
-    - 解析度鎖定 1080p（不足則上縮放）
-    - 字幕使用 ASS 樣式（KTV 感）
-    - H.264 / AAC 編碼
+    subtitle_mode="none" 時跳過字幕燒入（影片畫面已有歌詞的 MV 適用）。
     """
     print("[4/4] FFmpeg 合成輸出...")
 
-    # 先將 SRT 轉為 ASS（方便自訂字幕樣式）
-    ass_path = job_dir / "subtitle.ass"
-    subprocess.run([
-        "ffmpeg", "-y",
-        "-i", str(subtitle_path),
-        str(ass_path)
-    ], check=True, capture_output=True)
-
-    # 自訂 KTV 字幕樣式（注入 ASS 標頭）
-    _patch_ass_style(ass_path)
-
-    # 輸出檔名（去掉非法字元）
     safe_title = "".join(c for c in title if c not in r'\/:*?"<>|').strip()
     output_path = OUTPUT_DIR / f"{safe_title}_KTV.mp4"
 
-    vf = f"scale=-2:1080:flags=lanczos,subtitles={_esc(str(ass_path))}"
+    # 字幕處理（mode=none 或沒有字幕檔時跳過）
+    use_subtitle = subtitle_mode == "auto" and subtitle_path and subtitle_path.exists()
+    if use_subtitle:
+        ass_path = job_dir / "subtitle.ass"
+        subprocess.run([
+            "ffmpeg", "-y", "-i", str(subtitle_path), str(ass_path)
+        ], check=True, capture_output=True)
+        _patch_ass_style(ass_path)
+        vf = f"scale=-2:1080:flags=lanczos,subtitles={_esc(str(ass_path))}"
+    else:
+        vf = "scale=-2:1080:flags=lanczos"
     base_args = [
         "-c:v", "libx264", "-preset", "slow", "-crf", "18",
         "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-ac", "2",

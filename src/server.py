@@ -32,10 +32,11 @@ job_semaphore = asyncio.Semaphore(1)
 
 
 class ProcessRequest(BaseModel):
-    urls:         list[str]
-    vocal_mix:    float = 0.0   # 0.0 純伴奏 ~ 1.0 原唱
-    auto_upload:  bool  = False
-    yt_privacy:   str   = "private"  # private / unlisted / public
+    urls:          list[str]
+    vocal_mix:     float = 0.0    # 0.0 純伴奏 ~ 1.0 原唱
+    subtitle_mode: str   = "auto" # "auto" | "none"
+    auto_upload:   bool  = False
+    yt_privacy:    str   = "private"  # private / unlisted / public
 
 
 # ── 靜態頁面 ─────────────────────────────────────────────
@@ -89,7 +90,7 @@ async def start_process(req: ProcessRequest, bg: BackgroundTasks):
             "status": "queued", "progress": 0,
             "message": "排隊中...", "output": None, "url": url,
         }
-        bg.add_task(run_pipeline, job_id, url, req.vocal_mix, req.auto_upload, req.yt_privacy)
+        bg.add_task(run_pipeline, job_id, url, req.vocal_mix, req.subtitle_mode, req.auto_upload, req.yt_privacy)
         job_ids.append(job_id)
     return {"job_ids": job_ids}
 
@@ -123,6 +124,7 @@ async def run_pipeline(
     job_id: str,
     url: str,
     vocal_mix: float,
+    subtitle_mode: str,
     auto_upload: bool,
     yt_privacy: str,
 ):
@@ -149,14 +151,18 @@ async def run_pipeline(
             instrumental = vocal_result["instrumental"]
             vocals       = vocal_result["vocals"]
 
-            subtitle = info["subtitle_path"]
-            if subtitle:
-                upd(65, "取得 YouTube 字幕，轉換繁體中文...")
+            if subtitle_mode == "none":
+                upd(65, "跳過字幕（影片畫面已有歌詞）")
+                subtitle = None
             else:
-                upd(65, "無 YouTube 字幕，啟動 Whisper AI 識別...")
-                subtitle = await asyncio.to_thread(
-                    generate_subtitles_whisper, info["audio_path"], info["job_dir"]
-                )
+                subtitle = info["subtitle_path"]
+                if subtitle:
+                    upd(65, "取得 YouTube 字幕，轉換繁體中文...")
+                else:
+                    upd(65, "無 YouTube 字幕，啟動 Whisper AI 識別...")
+                    subtitle = await asyncio.to_thread(
+                        generate_subtitles_whisper, info["audio_path"], info["job_dir"]
+                    )
 
             mix_label = f"（人聲 {int(vocal_mix * 100)}%）" if vocal_mix > 0 else ""
             upd(80, f"FFmpeg 合成 1080p MP4 + 燒入字幕{mix_label}...")
@@ -169,6 +175,7 @@ async def run_pipeline(
                 info["job_dir"],
                 vocal_mix,
                 vocals,
+                subtitle_mode,
             )
 
             shutil.rmtree(info["job_dir"], ignore_errors=True)

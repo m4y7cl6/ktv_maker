@@ -157,6 +157,33 @@
     input[type="range"]::-webkit-slider-thumb:hover { box-shadow: 0 0 14px rgba(168,85,247,0.9); }
     .slider-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem; text-align: center; }
 
+    /* ── Subtitle Mode ── */
+    .sub-mode-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .sub-mode-btn {
+      flex: 1;
+      padding: 0.55rem 0.5rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .sub-mode-btn:hover { border-color: rgba(168,85,247,0.4); color: var(--text); }
+    .sub-mode-btn.active {
+      background: rgba(168,85,247,0.15);
+      border-color: var(--purple);
+      color: var(--purple);
+    }
+
     /* ── URL Textarea ── */
     .url-section { margin-bottom: 1rem; }
     .url-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
@@ -340,6 +367,19 @@
         <div class="slider-hint" id="mix-hint">去除所有人聲，適合 KTV 演唱</div>
       </div>
 
+      <!-- 字幕模式 -->
+      <div style="margin-bottom:0.5rem">
+        <label class="field-label">字幕模式</label>
+      </div>
+      <div class="sub-mode-row">
+        <div class="sub-mode-btn active" id="sub-auto" onclick="setSubMode('auto')">
+          🔍 自動偵測<br><span style="font-weight:400;font-size:0.68rem">YouTube 字幕 / Whisper</span>
+        </div>
+        <div class="sub-mode-btn" id="sub-none" onclick="setSubMode('none')">
+          🎬 不加字幕<br><span style="font-weight:400;font-size:0.68rem">MV 畫面已有歌詞</span>
+        </div>
+      </div>
+
       <!-- URL 輸入 -->
       <div class="url-section">
         <div class="url-header">
@@ -440,6 +480,14 @@
       }
     }
 
+    // ── Subtitle mode ─────────────────────────────────────
+    let subtitleMode = 'auto';
+    function setSubMode(mode) {
+      subtitleMode = mode;
+      document.getElementById('sub-auto').classList.toggle('active', mode === 'auto');
+      document.getElementById('sub-none').classList.toggle('active', mode === 'none');
+    }
+
     // ── Vocal mix slider ──────────────────────────────────
     const slider = document.getElementById('vocal-mix');
     const badge  = document.getElementById('mix-badge');
@@ -501,7 +549,7 @@
         const resp = await fetch('/api/process', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({urls, vocal_mix: vocalMix, auto_upload: autoUpload, yt_privacy: ytPrivacy}),
+          body: JSON.stringify({urls, vocal_mix: vocalMix, subtitle_mode: subtitleMode, auto_upload: autoUpload, yt_privacy: ytPrivacy}),
         });
         data = await resp.json();
       } catch (err) {
