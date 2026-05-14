@@ -18,6 +18,8 @@ TOKEN_FILE    = CREDS_DIR / "youtube_token.json"
 SECRETS_FILE  = CREDS_DIR / "client_secrets.json"
 REDIRECT_URI  = "http://localhost:8000/auth/callback"
 
+_pending_flow: Flow | None = None
+
 
 def has_secrets() -> bool:
     return SECRETS_FILE.exists()
@@ -39,19 +41,22 @@ def is_authenticated() -> bool:
 
 
 def get_auth_url() -> str:
-    flow = Flow.from_client_secrets_file(
+    global _pending_flow
+    _pending_flow = Flow.from_client_secrets_file(
         str(SECRETS_FILE), scopes=SCOPES, redirect_uri=REDIRECT_URI
     )
-    url, _ = flow.authorization_url(prompt="consent", access_type="offline")
+    url, _ = _pending_flow.authorization_url(prompt="consent", access_type="offline")
     return url
 
 
 def exchange_code(code: str) -> None:
-    flow = Flow.from_client_secrets_file(
+    global _pending_flow
+    flow = _pending_flow or Flow.from_client_secrets_file(
         str(SECRETS_FILE), scopes=SCOPES, redirect_uri=REDIRECT_URI
     )
     flow.fetch_token(code=code)
     _save_creds(flow.credentials)
+    _pending_flow = None
 
 
 def upload_video(video_path: Path, title: str, privacy: str = "private") -> str:
