@@ -3,6 +3,10 @@ output/
 temp/
 demucs_cache/
 
+# YouTube OAuth 憑證（絕對不能 commit）
+credentials/client_secrets.json
+credentials/youtube_token.json
+
 # Python
 __pycache__/
 *.py[cod]

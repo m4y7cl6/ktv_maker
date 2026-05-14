@@ -19,6 +19,8 @@
       --muted:        #6666aa;
       --success:      #22c55e;
       --error:        #f87171;
+      --warning:      #fbbf24;
+      --yt-red:       #ff4444;
     }
 
     body {
@@ -29,18 +31,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
+      padding: 2rem 1rem 3rem;
       overflow-x: hidden;
     }
-
-    /* 背景光球 */
     body::before, body::after {
       content: '';
       position: fixed;
       border-radius: 50%;
       filter: blur(90px);
-      opacity: 0.14;
+      opacity: 0.13;
       pointer-events: none;
       z-index: 0;
     }
@@ -59,320 +58,241 @@
     @keyframes orb1 { to { transform: translate(220px, 220px); } }
     @keyframes orb2 { to { transform: translate(-200px, -160px); } }
 
-    .container {
-      width: 100%;
-      max-width: 580px;
-      position: relative;
-      z-index: 1;
-    }
+    .container { width: 100%; max-width: 620px; position: relative; z-index: 1; }
 
     /* ── Header ── */
-    header { text-align: center; margin-bottom: 2.5rem; }
-
-    .logo {
-      font-size: 4rem;
-      line-height: 1;
-      margin-bottom: 0.6rem;
-      display: inline-block;
-      animation: float 4s ease-in-out infinite;
-    }
+    header { text-align: center; margin-bottom: 1.75rem; }
+    .logo { font-size: 3.5rem; display: inline-block; animation: float 4s ease-in-out infinite; }
     @keyframes float {
       0%, 100% { transform: translateY(0); }
       50%       { transform: translateY(-8px); }
     }
-
     h1 {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
+      font-size: 2rem; font-weight: 800; letter-spacing: -0.5px;
       background: var(--grad);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-    .subtitle {
-      margin-top: 0.5rem;
-      color: var(--muted);
-      font-size: 0.88rem;
-      letter-spacing: 0.3px;
-    }
+    .subtitle { margin-top: 0.4rem; color: var(--muted); font-size: 0.85rem; }
 
     /* ── Card ── */
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 2rem;
+      border-radius: 20px;
+      padding: 1.75rem;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
     }
 
-    /* ── Input ── */
     .field-label {
       display: block;
-      font-size: 0.75rem;
-      font-weight: 600;
+      font-size: 0.72rem; font-weight: 600;
       color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 0.6rem;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 0.5rem;
     }
-    .input-wrap {
-      position: relative;
+
+    /* ── YouTube Auth Bar ── */
+    .yt-bar {
       display: flex;
       align-items: center;
-    }
-    .yt-icon {
-      position: absolute;
-      left: 1rem;
-      font-size: 1.1rem;
-      pointer-events: none;
-      opacity: 0.8;
-    }
-    #url-input {
-      width: 100%;
-      padding: 0.85rem 1rem 0.85rem 2.9rem;
-      background: rgba(255,255,255,0.05);
+      gap: 0.75rem;
+      padding: 0.7rem 1rem;
+      background: rgba(255,255,255,0.03);
       border: 1px solid var(--border);
       border-radius: 12px;
-      color: var(--text);
-      font-size: 0.95rem;
-      outline: none;
+      margin-bottom: 1.25rem;
+    }
+    .yt-logo { font-size: 1.2rem; flex-shrink: 0; }
+    .yt-info { flex: 1; min-width: 0; }
+    .yt-label { font-size: 0.8rem; font-weight: 600; }
+    .yt-status { font-size: 0.7rem; margin-top: 0.1rem; }
+    .yt-status.ok  { color: var(--success); }
+    .yt-status.no  { color: var(--muted); }
+    .yt-status.err { color: var(--warning); }
+    .btn-yt-auth {
+      flex-shrink: 0;
+      padding: 0.38rem 0.85rem;
+      background: var(--yt-red);
+      border: none; border-radius: 8px;
+      color: #fff; font-size: 0.75rem; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn-yt-auth:hover { opacity: 0.85; }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.25rem 0;
+    }
+
+    /* ── Vocal Mix Slider ── */
+    .slider-section { margin-bottom: 1.25rem; }
+    .slider-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .slider-badge {
+      font-size: 0.75rem; font-weight: 700;
+      padding: 0.15rem 0.55rem; border-radius: 99px;
+      background: var(--grad); color: #fff;
+    }
+    .slider-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.68rem; color: var(--muted); margin-bottom: 0.4rem;
+    }
+    input[type="range"] {
+      width: 100%; appearance: none; -webkit-appearance: none;
+      height: 6px; border-radius: 99px;
+      background: rgba(255,255,255,0.08); outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--grad);
+      box-shadow: 0 0 8px rgba(168,85,247,0.6); cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { box-shadow: 0 0 14px rgba(168,85,247,0.9); }
+    .slider-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem; text-align: center; }
+
+    /* ── URL Textarea ── */
+    .url-section { margin-bottom: 1rem; }
+    .url-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    #url-count { font-size: 0.72rem; color: var(--purple); font-weight: 600; }
+    #url-textarea {
+      width: 100%; min-height: 90px; max-height: 200px;
+      padding: 0.8rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border); border-radius: 12px;
+      color: var(--text); font-size: 0.88rem;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      outline: none; resize: vertical; line-height: 1.6;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    #url-input::placeholder { color: var(--muted); }
-    #url-input:focus {
-      border-color: var(--border-focus);
-      box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
-    }
-    #url-input:disabled { opacity: 0.5; cursor: not-allowed; }
+    #url-textarea::placeholder { color: var(--muted); }
+    #url-textarea:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(168,85,247,0.15); }
+    #url-textarea:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* ── Start Button ── */
+    /* ── Upload Options ── */
+    .upload-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 0.85rem;
+    }
+    .toggle-wrap { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none; }
+    .toggle-wrap input[type="checkbox"] { display: none; }
+    .toggle-track {
+      width: 36px; height: 20px; border-radius: 99px;
+      background: rgba(255,255,255,0.1);
+      position: relative; transition: background 0.2s;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.2s;
+    }
+    .toggle-wrap input:checked ~ .toggle-track { background: var(--yt-red); }
+    .toggle-wrap input:checked ~ .toggle-track::after { transform: translateX(16px); }
+    .toggle-label { font-size: 0.82rem; font-weight: 600; }
+
+    #privacy-select {
+      margin-left: auto;
+      padding: 0.3rem 0.7rem;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.78rem;
+      outline: none; cursor: pointer;
+      display: none;
+    }
+    #privacy-select option { background: #1a1a2e; }
+
+    /* ── Submit Button ── */
     #start-btn {
-      width: 100%;
-      margin-top: 1rem;
-      padding: 0.95rem;
-      background: var(--grad);
-      border: none;
-      border-radius: 12px;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
+      width: 100%; padding: 0.95rem;
+      background: var(--grad); border: none; border-radius: 12px;
+      color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
       letter-spacing: 0.3px;
       transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
-      position: relative;
-      overflow: hidden;
+      position: relative; overflow: hidden;
     }
     #start-btn::after {
       content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%);
-      transform: translateX(-100%);
-      transition: transform 0.4s;
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+      transform: translateX(-100%); transition: transform 0.4s;
     }
     #start-btn:hover:not(:disabled)::after { transform: translateX(100%); }
-    #start-btn:hover:not(:disabled) {
-      box-shadow: 0 4px 20px rgba(168,85,247,0.4);
-    }
+    #start-btn:hover:not(:disabled) { box-shadow: 0 4px 20px rgba(168,85,247,0.4); }
     #start-btn:active:not(:disabled) { transform: scale(0.98); }
     #start-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── Progress ── */
-    #progress-section { display: none; margin-top: 1.75rem; }
-
-    .steps {
-      display: flex;
-      gap: 0.4rem;
-      margin-bottom: 1.5rem;
-      justify-content: space-between;
-    }
-    .step {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.35rem;
-    }
-    .step-dot {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      border: 2px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--muted);
-      transition: all 0.4s ease;
-      background: transparent;
-    }
-    .step-name {
-      font-size: 0.68rem;
-      color: var(--muted);
-      text-align: center;
-      line-height: 1.3;
-      transition: color 0.4s;
-    }
-    .step.active .step-dot {
-      background: var(--grad);
-      border-color: transparent;
-      color: #fff;
-      animation: step-glow 1.6s ease-in-out infinite;
-    }
-    .step.active .step-name { color: var(--purple); font-weight: 600; }
-    @keyframes step-glow {
-      0%, 100% { box-shadow: 0 0 10px rgba(168,85,247,0.5); }
-      50%       { box-shadow: 0 0 22px rgba(168,85,247,0.9); }
-    }
-    .step.done .step-dot {
-      background: var(--success);
-      border-color: transparent;
-      color: #fff;
-    }
-    .step.done .step-name { color: var(--success); }
-
-    /* 步驟之間的連接線 */
-    .step-line {
-      flex: 0.4;
-      height: 2px;
-      background: var(--border);
-      margin-top: 19px;
-      border-radius: 2px;
-      transition: background 0.4s;
-      align-self: flex-start;
-    }
-    .step-line.done { background: var(--success); }
-
-    /* Progress Bar */
-    .progress-track {
-      height: 7px;
-      background: rgba(255,255,255,0.07);
-      border-radius: 99px;
-      overflow: hidden;
-      margin-bottom: 0.65rem;
-    }
-    #progress-fill {
-      height: 100%;
-      background: var(--grad);
-      border-radius: 99px;
-      width: 0%;
-      transition: width 0.7s ease;
-      position: relative;
-    }
-    #progress-fill::after {
-      content: '';
-      position: absolute;
-      top: 0; right: -20px;
-      width: 50px; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
-      animation: shimmer 1.8s ease-in-out infinite;
-    }
-    @keyframes shimmer {
-      0%   { opacity: 0; }
-      50%  { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    .progress-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    #progress-msg { font-size: 0.84rem; color: var(--muted); }
-    #progress-pct {
-      font-size: 0.84rem;
-      font-weight: 700;
-      background: var(--grad);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
     /* ── Error ── */
     #error-box {
-      display: none;
-      margin-top: 1rem;
-      padding: 0.85rem 1rem;
+      display: none; margin-top: 0.85rem;
+      padding: 0.8rem 1rem;
       background: rgba(248,113,113,0.08);
       border: 1px solid rgba(248,113,113,0.25);
-      border-radius: 10px;
-      font-size: 0.84rem;
-      color: var(--error);
-      line-height: 1.5;
+      border-radius: 10px; font-size: 0.82rem; color: var(--error);
     }
 
-    /* ── Result ── */
-    #result-section {
+    /* ── Queue ── */
+    #queue-section { display: none; margin-top: 1.5rem; }
+    .queue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .queue-title { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    #queue-stats { font-size: 0.75rem; color: var(--purple); font-weight: 600; }
+    #queue-list { display: flex; flex-direction: column; gap: 0.65rem; }
+
+    /* ── Job Card ── */
+    .job-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 1rem 1.1rem;
+      transition: border-color 0.3s;
+    }
+    .job-card.running { border-color: rgba(168,85,247,0.4); }
+    .job-card.done    { border-color: rgba(34,197,94,0.3); }
+    .job-card.error   { border-color: rgba(248,113,113,0.3); }
+    .job-top { display: flex; align-items: flex-start; gap: 0.75rem; }
+    .job-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+    .job-icon.spinning { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .job-info { flex: 1; min-width: 0; }
+    .job-title { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .job-msg   { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+    .job-links { display: flex; gap: 0.4rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+    .btn-dl, .btn-yt {
       display: none;
-      margin-top: 1.75rem;
-      text-align: center;
+      padding: 0.38rem 0.8rem;
+      border: none; border-radius: 8px;
+      color: #fff; font-size: 0.75rem; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      transition: opacity 0.2s;
     }
-    .result-emoji {
-      font-size: 3.2rem;
-      display: inline-block;
-      animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes pop {
-      0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
-      100% { transform: scale(1) rotate(0deg);   opacity: 1; }
-    }
-    .result-title {
-      margin: 0.7rem 0 0.2rem;
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-    #result-filename {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-bottom: 1.25rem;
-      word-break: break-all;
-    }
-    #download-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.9rem 2.2rem;
-      background: var(--grad);
-      border: none;
-      border-radius: 12px;
-      color: #fff;
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-decoration: none;
-      transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
-    }
-    #download-btn:hover {
-      opacity: 0.9;
-      box-shadow: 0 4px 20px rgba(168,85,247,0.4);
-    }
-    #download-btn:active { transform: scale(0.97); }
+    .btn-dl { background: var(--grad); }
+    .btn-yt { background: var(--yt-red); }
+    .btn-dl:hover, .btn-yt:hover { opacity: 0.85; }
 
-    .reset-link {
-      display: block;
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: var(--muted);
-      cursor: pointer;
-      text-decoration: underline;
-      text-underline-offset: 2px;
+    .job-bar-wrap { display: none; margin-top: 0.65rem; }
+    .job-bar-track { height: 4px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
+    .job-bar-fill { height: 100%; background: var(--grad); border-radius: 99px; width: 0%; transition: width 0.6s ease; }
+    .job-bar-info { display: flex; justify-content: space-between; margin-top: 0.3rem; }
+    .job-bar-msg { font-size: 0.7rem; color: var(--muted); }
+    .job-bar-pct {
+      font-size: 0.7rem; font-weight: 700;
+      background: var(--grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-    .reset-link:hover { color: var(--text); }
 
     /* ── Footer ── */
-    footer {
-      margin-top: 2rem;
-      font-size: 0.73rem;
-      color: var(--muted);
-      text-align: center;
-      letter-spacing: 0.2px;
-    }
-    footer span {
-      margin: 0 0.3rem;
-      opacity: 0.5;
-    }
+    footer { margin-top: 2rem; font-size: 0.72rem; color: var(--muted); text-align: center; z-index: 1; position: relative; }
+    footer span { margin: 0 0.3rem; opacity: 0.5; }
 
-    /* ── Shake animation ── */
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       20%       { transform: translateX(-7px); }
@@ -391,210 +311,340 @@
     </header>
 
     <div class="card">
-      <!-- Input -->
-      <label class="field-label" for="url-input">YouTube 網址</label>
-      <div class="input-wrap">
-        <span class="yt-icon">▶️</span>
-        <input
-          id="url-input"
-          type="url"
-          placeholder="https://www.youtube.com/watch?v=..."
-          autocomplete="off"
-          spellcheck="false"
-        />
-      </div>
-      <button id="start-btn" onclick="startProcess()">開始製作 KTV</button>
 
-      <!-- Progress -->
-      <div id="progress-section">
-        <div class="steps" id="steps-row">
-          <div class="step" id="step-1">
-            <div class="step-dot">1</div>
-            <div class="step-name">下載影片</div>
-          </div>
-          <div class="step-line" id="line-1"></div>
-          <div class="step" id="step-2">
-            <div class="step-dot">2</div>
-            <div class="step-name">人聲分離</div>
-          </div>
-          <div class="step-line" id="line-2"></div>
-          <div class="step" id="step-3">
-            <div class="step-dot">3</div>
-            <div class="step-name">字幕識別</div>
-          </div>
-          <div class="step-line" id="line-3"></div>
-          <div class="step" id="step-4">
-            <div class="step-dot">4</div>
-            <div class="step-name">合成輸出</div>
-          </div>
+      <!-- YouTube 授權狀態列 -->
+      <div class="yt-bar">
+        <div class="yt-logo">▶️</div>
+        <div class="yt-info">
+          <div class="yt-label">YouTube 帳號</div>
+          <div class="yt-status no" id="yt-status-text">檢查中...</div>
         </div>
-
-        <div class="progress-track">
-          <div id="progress-fill"></div>
-        </div>
-        <div class="progress-info">
-          <span id="progress-msg">準備中...</span>
-          <span id="progress-pct">0%</span>
-        </div>
+        <a id="yt-auth-btn" class="btn-yt-auth" href="/auth/youtube" target="_blank" onclick="pollAuthStatus()">
+          連結帳號
+        </a>
       </div>
 
-      <!-- Error -->
+      <div class="divider"></div>
+
+      <!-- 人聲混音滑桿 -->
+      <div class="slider-section">
+        <div class="slider-header">
+          <label class="field-label" style="margin:0">人聲比例</label>
+          <span class="slider-badge" id="mix-badge">純伴奏 KTV</span>
+        </div>
+        <div class="slider-labels">
+          <span>🎵 純伴奏</span>
+          <span>🎤 原唱</span>
+        </div>
+        <input type="range" id="vocal-mix" min="0" max="100" value="0" step="5" />
+        <div class="slider-hint" id="mix-hint">去除所有人聲，適合 KTV 演唱</div>
+      </div>
+
+      <!-- URL 輸入 -->
+      <div class="url-section">
+        <div class="url-header">
+          <label class="field-label" style="margin:0">YouTube 網址</label>
+          <span id="url-count"></span>
+        </div>
+        <textarea
+          id="url-textarea"
+          placeholder="貼入一或多個 YouTube 網址，每行一個&#10;https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=..."
+        ></textarea>
+      </div>
+
+      <!-- 自動上傳選項 -->
+      <div class="upload-row">
+        <label class="toggle-wrap">
+          <input type="checkbox" id="auto-upload-toggle" onchange="onToggleUpload()" />
+          <div class="toggle-track"></div>
+          <span class="toggle-label">完成後自動上傳到 YouTube</span>
+        </label>
+        <select id="privacy-select">
+          <option value="private">🔒 私人</option>
+          <option value="unlisted">🔗 不公開</option>
+          <option value="public">🌍 公開</option>
+        </select>
+      </div>
+
+      <button id="start-btn" onclick="startBatch()">開始製作 KTV</button>
       <div id="error-box"></div>
+    </div>
 
-      <!-- Result -->
-      <div id="result-section">
-        <div class="result-emoji">🎉</div>
-        <div class="result-title">製作完成！</div>
-        <div id="result-filename"></div>
-        <a id="download-btn" href="#" download>⬇&nbsp; 下載 KTV MP4</a>
-        <span class="reset-link" onclick="resetUI()">製作另一首 →</span>
+    <!-- 佇列 -->
+    <div id="queue-section">
+      <div class="queue-header">
+        <span class="queue-title">處理佇列</span>
+        <span id="queue-stats"></span>
       </div>
+      <div id="queue-list"></div>
     </div>
 
     <footer>
-      Demucs htdemucs <span>·</span> faster-whisper large-v3 <span>·</span> FFmpeg 1080p
+      Demucs htdemucs <span>·</span> faster-whisper <span>·</span> FFmpeg 1080p
     </footer>
   </div>
 
   <script>
-    let evtSrc = null;
+    // ── Auth status ───────────────────────────────────────
+    let ytAuthed = false;
 
-    function startProcess() {
-      const input = document.getElementById('url-input');
-      const url = input.value.trim();
+    async function checkAuthStatus() {
+      try {
+        const r = await fetch('/auth/status');
+        const d = await r.json();
+        ytAuthed = d.authenticated;
+        const el     = document.getElementById('yt-status-text');
+        const authBtn = document.getElementById('yt-auth-btn');
 
-      if (!url) { shake(input); return; }
-      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-        showError('請輸入有效的 YouTube 網址');
+        if (!d.has_secrets) {
+          el.textContent = '未設定 client_secrets.json';
+          el.className = 'yt-status err';
+          authBtn.style.display = 'none';
+        } else if (d.authenticated) {
+          el.textContent = '✓ 已連結，可自動上傳';
+          el.className = 'yt-status ok';
+          authBtn.textContent = '重新連結';
+        } else {
+          el.textContent = '尚未連結';
+          el.className = 'yt-status no';
+          authBtn.textContent = '連結帳號';
+        }
+      } catch {
+        document.getElementById('yt-status-text').textContent = '無法取得狀態';
+      }
+    }
+
+    function pollAuthStatus() {
+      // 開啟授權視窗後，輪詢直到授權完成
+      const timer = setInterval(async () => {
+        const r = await fetch('/auth/status');
+        const d = await r.json();
+        if (d.authenticated) {
+          clearInterval(timer);
+          checkAuthStatus();
+        }
+      }, 2000);
+      setTimeout(() => clearInterval(timer), 120000); // 2 分鐘後停止
+    }
+
+    checkAuthStatus();
+
+    // ── Upload toggle ─────────────────────────────────────
+    function onToggleUpload() {
+      const on = document.getElementById('auto-upload-toggle').checked;
+      document.getElementById('privacy-select').style.display = on ? 'block' : 'none';
+      if (on && !ytAuthed) {
+        showError('請先連結 YouTube 帳號才能自動上傳');
+        document.getElementById('auto-upload-toggle').checked = false;
+        document.getElementById('privacy-select').style.display = 'none';
+      }
+    }
+
+    // ── Vocal mix slider ──────────────────────────────────
+    const slider = document.getElementById('vocal-mix');
+    const badge  = document.getElementById('mix-badge');
+    const hint   = document.getElementById('mix-hint');
+
+    const hintMap = {
+      0:  ['純伴奏 KTV',  '去除所有人聲，適合 KTV 演唱'],
+      25: ['伴奏為主',    '保留少量人聲，演唱時有參考感'],
+      50: ['人聲 50%',   '人聲與伴奏各半，適合跟唱練習'],
+      75: ['人聲為主',    '大部分保留原唱，輕度去底'],
+      100:['原唱',       '完整保留人聲（等同原版）'],
+    };
+
+    slider.addEventListener('input', () => {
+      const v = parseInt(slider.value);
+      const keys = Object.keys(hintMap).map(Number).sort((a,b)=>a-b);
+      const nearest = keys.reduce((a,b) => Math.abs(b-v) < Math.abs(a-v) ? b : a);
+      badge.textContent = v === 0 ? hintMap[0][0] : v === 100 ? hintMap[100][0] : `人聲 ${v}%`;
+      hint.textContent  = hintMap[nearest][1];
+    });
+
+    // ── URL parsing ───────────────────────────────────────
+    const textarea = document.getElementById('url-textarea');
+    textarea.addEventListener('input', updateCount);
+
+    function parseURLs() {
+      return textarea.value
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l.includes('youtube.com') || l.includes('youtu.be'));
+    }
+
+    function updateCount() {
+      const n = parseURLs().length;
+      document.getElementById('url-count').textContent = n > 0 ? `${n} 首` : '';
+    }
+
+    // ── Queue ─────────────────────────────────────────────
+    const jobsState = new Map();
+    let totalJobs = 0, doneJobs = 0;
+
+    function updateStats() {
+      document.getElementById('queue-stats').textContent = `${doneJobs} / ${totalJobs} 完成`;
+    }
+
+    // ── Start ─────────────────────────────────────────────
+    async function startBatch() {
+      const urls = parseURLs();
+      if (!urls.length) { shake(textarea); showError('請貼入至少一個 YouTube 網址'); return; }
+      hideError();
+      setLoading(true);
+
+      const vocalMix   = parseInt(slider.value) / 100;
+      const autoUpload = document.getElementById('auto-upload-toggle').checked;
+      const ytPrivacy  = document.getElementById('privacy-select').value;
+
+      let data;
+      try {
+        const resp = await fetch('/api/process', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({urls, vocal_mix: vocalMix, auto_upload: autoUpload, yt_privacy: ytPrivacy}),
+        });
+        data = await resp.json();
+      } catch (err) {
+        setLoading(false);
+        showError('連線失敗：' + err.message);
         return;
       }
 
-      setLoading(true);
-      hideError();
+      totalJobs += data.job_ids.length;
+      updateStats();
+      document.getElementById('queue-section').style.display = 'block';
+      textarea.value = '';
+      updateCount();
+      setLoading(false);
 
-      fetch('/api/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (!data.job_id) throw new Error('伺服器未回傳 job_id');
-          showProgress();
-          listenSSE(data.job_id);
-        })
-        .catch(err => {
-          setLoading(false);
-          showError('連線失敗：' + err.message);
-        });
+      data.job_ids.forEach((jobId, i) => {
+        addJobCard(jobId, urls[i]);
+        listenSSE(jobId);
+      });
+    }
+
+    // ── Job card ──────────────────────────────────────────
+    function addJobCard(jobId, url) {
+      const card = document.createElement('div');
+      card.className = 'job-card';
+      card.id = `job-${jobId}`;
+      card.innerHTML = `
+        <div class="job-top">
+          <div class="job-icon" id="icon-${jobId}">⏳</div>
+          <div class="job-info">
+            <div class="job-title" id="title-${jobId}">${shortenUrl(url)}</div>
+            <div class="job-msg"   id="msg-${jobId}">排隊中...</div>
+          </div>
+          <div class="job-links">
+            <a class="btn-dl" id="dl-${jobId}"  href="#" download>⬇ 下載</a>
+            <a class="btn-yt" id="yt-${jobId}"  href="#" target="_blank">▶ YouTube</a>
+          </div>
+        </div>
+        <div class="job-bar-wrap" id="bar-wrap-${jobId}">
+          <div class="job-bar-track"><div class="job-bar-fill" id="bar-${jobId}"></div></div>
+          <div class="job-bar-info">
+            <span class="job-bar-msg" id="bar-msg-${jobId}"></span>
+            <span class="job-bar-pct" id="bar-pct-${jobId}"></span>
+          </div>
+        </div>`;
+      document.getElementById('queue-list').appendChild(card);
+    }
+
+    function updateJobCard(jobId, job) {
+      const card    = document.getElementById(`job-${jobId}`);
+      if (!card) return;
+      const icon    = document.getElementById(`icon-${jobId}`);
+      const msg     = document.getElementById(`msg-${jobId}`);
+      const titleEl = document.getElementById(`title-${jobId}`);
+      const barWrap = document.getElementById(`bar-wrap-${jobId}`);
+      const barFill = document.getElementById(`bar-${jobId}`);
+      const barMsg  = document.getElementById(`bar-msg-${jobId}`);
+      const barPct  = document.getElementById(`bar-pct-${jobId}`);
+      const dlBtn   = document.getElementById(`dl-${jobId}`);
+      const ytBtn   = document.getElementById(`yt-${jobId}`);
+
+      if (job.title) titleEl.textContent = job.title;
+
+      if (job.status === 'queued') {
+        icon.textContent = '⏳'; icon.className = 'job-icon';
+        msg.textContent = '排隊中...'; card.className = 'job-card';
+
+      } else if (job.status === 'running') {
+        icon.textContent = '⚙️'; icon.className = 'job-icon spinning';
+        card.className = 'job-card running';
+        barWrap.style.display = 'block';
+        barFill.style.width = (job.progress || 0) + '%';
+        barMsg.textContent  = job.message || '';
+        barPct.textContent  = (job.progress || 0) + '%';
+        msg.textContent     = job.message || '';
+
+      } else if (job.status === 'done') {
+        icon.textContent = '✅'; icon.className = 'job-icon';
+        msg.textContent  = job.filename || '完成';
+        card.className   = 'job-card done';
+        barWrap.style.display = 'none';
+        dlBtn.style.display   = 'inline-flex';
+        dlBtn.href = `/api/download/${jobId}`;
+        if (job.yt_url) {
+          ytBtn.style.display = 'inline-flex';
+          ytBtn.href = job.yt_url;
+        }
+        if (!jobsState.get(jobId)?.counted) {
+          doneJobs++; jobsState.set(jobId, {counted: true}); updateStats();
+        }
+
+      } else if (job.status === 'error') {
+        icon.textContent = '❌'; icon.className = 'job-icon';
+        msg.textContent  = job.message || '發生錯誤';
+        card.className   = 'job-card error';
+        barWrap.style.display = 'none';
+        if (!jobsState.get(jobId)?.counted) {
+          doneJobs++; jobsState.set(jobId, {counted: true}); updateStats();
+        }
+      }
     }
 
     function listenSSE(jobId) {
-      evtSrc = new EventSource('/api/progress/' + jobId);
-
-      evtSrc.onmessage = (e) => {
+      const src = new EventSource(`/api/progress/${jobId}`);
+      src.onmessage = (e) => {
         const job = JSON.parse(e.data);
-        updateProgress(job);
-
-        if (job.status === 'done') {
-          evtSrc.close();
-          setLoading(false);
-          showResult(jobId, job.filename);
-        } else if (job.status === 'error') {
-          evtSrc.close();
-          setLoading(false);
-          showError(job.message || '處理失敗，請查看伺服器日誌');
-        }
+        updateJobCard(jobId, job);
+        if (job.status === 'done' || job.status === 'error') src.close();
       };
-
-      evtSrc.onerror = () => {
-        evtSrc.close();
-        setLoading(false);
-        showError('與伺服器失去連線，請重新整理頁面');
+      src.onerror = () => {
+        src.close();
+        updateJobCard(jobId, {status: 'error', message: '與伺服器失去連線'});
       };
     }
 
-    function updateProgress(job) {
-      const pct = job.progress || 0;
-      document.getElementById('progress-fill').style.width = pct + '%';
-      document.getElementById('progress-pct').textContent = pct + '%';
-      document.getElementById('progress-msg').textContent = job.message || '';
-
-      // Step 1: 0–29%  Step 2: 30–64%  Step 3: 65–79%  Step 4: 80–99%
-      const thresholds = [0, 30, 65, 80, 100];
-      const current = pct < 30 ? 1 : pct < 65 ? 2 : pct < 80 ? 3 : pct < 100 ? 4 : 5;
-
-      for (let i = 1; i <= 4; i++) {
-        const state = i < current ? 'done' : i === current ? 'active' : '';
-        setStep(i, state);
-      }
-      for (let i = 1; i <= 3; i++) {
-        const line = document.getElementById('line-' + i);
-        line.className = 'step-line' + (i < current ? ' done' : '');
-      }
-    }
-
-    function setStep(n, state) {
-      const el = document.getElementById('step-' + n);
-      el.className = 'step' + (state ? ' ' + state : '');
-      const dot = el.querySelector('.step-dot');
-      dot.textContent = state === 'done' ? '✓' : n;
-    }
-
-    function showProgress() {
-      document.getElementById('progress-section').style.display = 'block';
-    }
-
-    function showResult(jobId, filename) {
-      document.getElementById('result-section').style.display = 'block';
-      document.getElementById('result-filename').textContent = filename || '';
-      document.getElementById('download-btn').href = '/api/download/' + jobId;
+    // ── Helpers ───────────────────────────────────────────
+    function shortenUrl(url) {
+      try {
+        const u = new URL(url);
+        const v = u.searchParams.get('v');
+        return v ? `youtube.com/watch?v=${v}` : url.slice(0, 50);
+      } catch { return url.slice(0, 50); }
     }
 
     function setLoading(on) {
-      const btn = document.getElementById('start-btn');
-      const inp = document.getElementById('url-input');
-      btn.disabled = on;
-      inp.disabled = on;
-      btn.textContent = on ? '處理中...' : '開始製作 KTV';
+      document.getElementById('start-btn').disabled = on;
+      textarea.disabled = on;
+      document.getElementById('start-btn').textContent = on ? '送出中...' : '開始製作 KTV';
     }
 
     function showError(msg) {
-      const box = document.getElementById('error-box');
-      box.textContent = '⚠ ' + msg;
-      box.style.display = 'block';
+      const b = document.getElementById('error-box');
+      b.textContent = '⚠ ' + msg; b.style.display = 'block';
     }
-
-    function hideError() {
-      document.getElementById('error-box').style.display = 'none';
-    }
-
-    function resetUI() {
-      if (evtSrc) evtSrc.close();
-      const inp = document.getElementById('url-input');
-      inp.value = '';
-      inp.disabled = false;
-      setLoading(false);
-      document.getElementById('progress-section').style.display = 'none';
-      document.getElementById('result-section').style.display = 'none';
-      document.getElementById('progress-fill').style.width = '0%';
-      document.getElementById('progress-pct').textContent = '0%';
-      document.getElementById('progress-msg').textContent = '準備中...';
-      for (let i = 1; i <= 4; i++) setStep(i, '');
-      for (let i = 1; i <= 3; i++) {
-        document.getElementById('line-' + i).className = 'step-line';
-      }
-      hideError();
-    }
+    function hideError() { document.getElementById('error-box').style.display = 'none'; }
 
     function shake(el) {
-      el.style.animation = 'none';
-      void el.offsetHeight;
+      el.style.animation = 'none'; void el.offsetHeight;
       el.style.animation = 'shake 0.4s ease';
     }
 
-    document.getElementById('url-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') startProcess();
+    textarea.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) startBatch();
     });
   </script>
 </body>

@@ -5,8 +5,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./output:/app/output          # 輸出 MP4 掛載到本機
-      - model_cache:/app/model_cache  # Demucs / Whisper 模型快取（持久化）
+      - ./output:/app/output                  # 輸出 MP4 掛載到本機
+      - model_cache:/app/model_cache          # Demucs / Whisper 模型快取（持久化）
+      - ./credentials:/app/credentials        # YouTube OAuth 憑證
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - PYTHONUNBUFFERED=1

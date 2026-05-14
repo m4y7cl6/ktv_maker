@@ -91,18 +91,26 @@ python src/pipeline.py "https://..." --job-id my_song_01
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| POST | `/api/process` | 啟動處理，回傳 `job_id` |
+| POST | `/api/process` | 批次啟動處理，回傳 `job_ids` 列表 |
 | GET  | `/api/progress/{job_id}` | SSE 進度串流 |
 | GET  | `/api/download/{job_id}` | 下載完成的 MP4 |
+| GET  | `/auth/status` | 查詢 YouTube 授權狀態 |
+| GET  | `/auth/youtube` | 開始 YouTube OAuth 授權流程 |
+| GET  | `/auth/callback` | OAuth 回呼（Google 自動呼叫） |
 
 ### 呼叫範例
 
 ```bash
-# 啟動
+# 啟動（支援批次，vocal_mix: 0.0 純伴奏 ~ 1.0 原唱）
 curl -X POST http://localhost:8000/api/process \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://www.youtube.com/watch?v=XXXX"}'
-# → {"job_id": "a1b2c3d4"}
+  -d '{
+    "urls": ["https://www.youtube.com/watch?v=XXXX"],
+    "vocal_mix": 0.0,
+    "auto_upload": false,
+    "yt_privacy": "private"
+  }'
+# → {"job_ids": ["a1b2c3d4"]}
 
 # 監聽進度
 curl -N http://localhost:8000/api/progress/a1b2c3d4
@@ -110,6 +118,45 @@ curl -N http://localhost:8000/api/progress/a1b2c3d4
 # 下載
 wget http://localhost:8000/api/download/a1b2c3d4 -O ktv_output.mp4
 ```
+
+---
+
+## YouTube 自動上傳設定
+
+處理完成後可自動上傳至你的 YouTube 頻道，需先完成以下一次性設定：
+
+### 1. 建立 Google Cloud 專案
+
+1. 前往 [console.cloud.google.com](https://console.cloud.google.com)
+2. 建立新專案（名稱隨意，例如 `ktv-maker`）
+3. 左側選單 → **API 和服務** → **啟用 API**
+4. 搜尋並啟用 **YouTube Data API v3**
+
+### 2. 建立 OAuth 憑證
+
+1. 左側選單 → **API 和服務** → **憑證**
+2. 點選 **建立憑證** → **OAuth 用戶端 ID**
+3. 應用程式類型選擇：**網頁應用程式**
+4. 在「已授權的重新導向 URI」加入：
+   ```
+   http://localhost:8000/auth/callback
+   ```
+5. 點選建立，下載 JSON 檔案
+
+### 3. 放置憑證檔
+
+```bash
+# 將下載的 JSON 改名，放到專案 credentials/ 目錄
+mv ~/Downloads/client_secret_xxx.json credentials/client_secrets.json
+```
+
+> ⚠️ `client_secrets.json` 已列入 `.gitignore`，**不會被 commit 到 Git**。
+
+### 4. 連結帳號
+
+重啟容器後，在網頁點選「**連結帳號**」按鈕，完成 Google 授權即可。
+
+授權 token 會儲存在 `credentials/youtube_token.json`（同樣不會上傳到 Git）。
 
 ---
 

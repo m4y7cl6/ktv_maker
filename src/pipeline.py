@@ -121,36 +121,34 @@ def separate_vocals(audio_path: Path, job_dir: Path) -> Path:
     """
     print("[2/4] AI 人聲分離（Demucs htdemucs）...")
 
+    if not audio_path.exists():
+        raise FileNotFoundError(f"音訊檔案不存在：{audio_path}")
+
     subprocess.run([
         sys.executable, "-m", "demucs",
         "--two-stems", "vocals",
         "-n", "htdemucs",
+        "--device", "cuda",
         "--out", str(job_dir / "demucs_out"),
         str(audio_path)
     ], check=True)
 
-    # 釋放 Demucs 佔用的 VRAM，避免 Whisper 載入時 OOM
-    try:
-        import torch
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    except Exception:
-        pass
-
-    # Demucs 輸出路徑規則：
-    # demucs_out/htdemucs/<stem_name>/no_vocals.wav
+    # Demucs 輸出路徑：demucs_out/htdemucs/<stem_name>/no_vocals.wav
     stem_name = audio_path.stem
     instrumental = job_dir / "demucs_out" / "htdemucs" / stem_name / "no_vocals.wav"
 
     if not instrumental.exists():
-        # 有些版本目錄結構略有不同，自動搜尋
         matches = list((job_dir / "demucs_out").rglob("no_vocals.wav"))
         if not matches:
             raise FileNotFoundError("Demucs 輸出找不到 no_vocals.wav")
         instrumental = matches[0]
 
+    vocals = instrumental.parent / "vocals.wav"
     print(f"  ✓ 伴奏輸出：{instrumental}")
-    return instrumental
+    return {
+        "instrumental": instrumental,
+        "vocals": vocals if vocals.exists() else None,
+    }
 
 
 # ══════════════════════════════════════════════════════════
@@ -225,11 +223,13 @@ def _fmt_time(seconds: float) -> str:
 # Step 4 │ FFmpeg 合成：影片 + 伴奏 + 字幕燒入 → MP4 1080p
 # ══════════════════════════════════════════════════════════
 def compose_output(
-    video_path:       Path,
+    video_path:        Path,
     instrumental_path: Path,
-    subtitle_path:    Path,
-    title:            str,
-    job_dir:          Path,
+    subtitle_path:     Path,
+    title:             str,
+    job_dir:           Path,
+    vocal_mix:         float = 0.0,
+    vocals_path:       Path | None = None,
 ) -> Path:
     """
     使用 FFmpeg 將無聲影片、伴奏音訊、SRT 字幕合成為最終 KTV MP4。
@@ -254,31 +254,40 @@ def compose_output(
     safe_title = "".join(c for c in title if c not in r'\/:*?"<>|').strip()
     output_path = OUTPUT_DIR / f"{safe_title}_KTV.mp4"
 
-    # FFmpeg 合成指令
-    cmd = [
-        "ffmpeg", "-y",
-        # 輸入 1：無聲影片
-        "-i", str(video_path),
-        # 輸入 2：伴奏音訊
-        "-i", str(instrumental_path),
-        # 視訊：縮放至 1080p + 燒入 ASS 字幕
-        "-vf", (
-            f"scale=-2:1080:flags=lanczos,"
-            f"subtitles={_esc(str(ass_path))}"
-        ),
-        # 音訊：AAC 320k（立體聲）
-        "-c:v", "libx264",
-        "-preset", "slow",          # 品質優先
-        "-crf", "18",               # 接近無損視覺品質
-        "-c:a", "aac",
-        "-b:a", "320k",
-        "-ar", "48000",
-        "-ac", "2",
-        "-map", "0:v:0",            # 取第一個輸入的視訊
-        "-map", "1:a:0",            # 取第二個輸入的音訊
-        "-movflags", "+faststart",  # 支援串流播放
-        str(output_path)
+    vf = f"scale=-2:1080:flags=lanczos,subtitles={_esc(str(ass_path))}"
+    base_args = [
+        "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+        "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-ac", "2",
+        "-movflags", "+faststart",
     ]
+
+    if vocal_mix > 0 and vocals_path and vocals_path.exists():
+        # 三輸入：影片 + 伴奏 + 人聲，用 amix 按比例混音
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-i", str(instrumental_path),
+            "-i", str(vocals_path),
+            "-vf", vf,
+            "-filter_complex",
+            f"[1:a]volume=1[inst];[2:a]volume={vocal_mix:.3f}[voc];"
+            f"[inst][voc]amix=inputs=2:normalize=0[aout]",
+            *base_args,
+            "-map", "0:v:0",
+            "-map", "[aout]",
+            str(output_path),
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-i", str(instrumental_path),
+            "-vf", vf,
+            *base_args,
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            str(output_path),
+        ]
     subprocess.run(cmd, check=True)
 
     size_mb = output_path.stat().st_size / 1_048_576
