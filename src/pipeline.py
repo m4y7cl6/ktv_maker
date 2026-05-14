@@ -207,7 +207,7 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
             ass_path.write_text("".join(lines), encoding="utf-8")
             print(f"  ✓ Whisper 卡拉 OK 字幕完成（{model_name} / {device}）：{ass_path}")
             return ass_path
-        except RuntimeError as e:
+        except Exception as e:
             print(f"  ⚠ {model_name}/{device} 失敗：{e}，嘗試下一個設定...")
             last_err = e
             try:
