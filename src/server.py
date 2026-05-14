@@ -10,7 +10,7 @@ import sqlite3
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -113,9 +113,9 @@ async def auth_youtube():
 
 
 @app.get("/auth/callback")
-async def auth_callback(code: str):
+async def auth_callback(request: Request):
     from youtube_uploader import exchange_code
-    exchange_code(code)
+    exchange_code(str(request.url))
     return HTMLResponse("""
         <html><body style="font-family:sans-serif;text-align:center;padding:3rem;background:#07071a;color:#f0f0ff">
           <h2>✅ YouTube 授權成功！</h2>

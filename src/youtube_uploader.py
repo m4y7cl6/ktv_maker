@@ -4,7 +4,10 @@ OAuth 2.0 授權 + 影片上傳
 """
 
 import json
+import os
 from pathlib import Path
+
+os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -49,12 +52,12 @@ def get_auth_url() -> str:
     return url
 
 
-def exchange_code(code: str) -> None:
+def exchange_code(authorization_response: str) -> None:
     global _pending_flow
     flow = _pending_flow or Flow.from_client_secrets_file(
         str(SECRETS_FILE), scopes=SCOPES, redirect_uri=REDIRECT_URI
     )
-    flow.fetch_token(code=code)
+    flow.fetch_token(authorization_response=authorization_response)
     _save_creds(flow.credentials)
     _pending_flow = None
 
