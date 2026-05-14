@@ -3,17 +3,33 @@
 YouTube 影片 → **AI 去人聲 + 繁體字幕燒入 → MP4 1080p**
 
 ```
-YouTube URL
+YouTube URL（支援批次，多首一起丟）
     │
     ├─ [yt-dlp]          下載 1080p 視訊 + 原始音訊 WAV
     │
-    ├─ [Demucs htdemucs] AI 人聲分離 → 伴奏 WAV
+    ├─ [Demucs htdemucs] AI 人聲分離 → 伴奏 WAV + 人聲 WAV
+    │                    （vocal_mix 滑桿可決定保留多少人聲）
     │
-    ├─ [yt-dlp 字幕]     抓 YouTube 內嵌字幕（繁中）
-    │   └─ 失敗時 ──→ [faster-whisper large-v3] AI 語音識別 + 繁體轉換
+    ├─ [字幕模式：auto]  抓 YouTube 內嵌字幕（繁中）
+    │   └─ 無字幕時 ──→ [faster-whisper] AI 語音識別 + 繁體轉換
+    │   [字幕模式：none] 跳過（MV 畫面已有歌詞時使用）
     │
-    └─ [FFmpeg]          合成：視訊 + 伴奏 + ASS 字幕燒入 → output/*.mp4
+    ├─ [FFmpeg]          合成：視訊 + 伴奏 + ASS 字幕燒入 → output/*.mp4
+    │
+    └─ [YouTube API]     自動上傳至頻道（選填，需 OAuth 授權）
 ```
+
+---
+
+## 功能特色
+
+| 功能 | 說明 |
+|------|------|
+| **批次處理** | 一次貼入多個 URL，依序排隊處理（GPU 不衝突）|
+| **人聲混音** | 滑桿調整 0%（純伴奏）~ 100%（原唱），適合練唱模式 |
+| **字幕模式** | 自動偵測 / 不加字幕（MV 畫面已有歌詞時選用）|
+| **YouTube 上傳** | 完成後自動上傳，可設定私人 / 不公開 / 公開 |
+| **歷史記錄** | 持久化記錄每首產製紀錄，重啟不消失，可重複下載 |
 
 ---
 
@@ -33,14 +49,16 @@ YouTube URL
 
 ```bash
 # 1. Clone 並進入目錄
-git clone <your-repo> ktv-maker && cd ktv-maker
+git clone https://github.com/m4y7cl6/ktv_maker.git && cd ktv_maker
 
-# 2. 啟動（首次會下載模型，約 5-10 GB，需等待）
+# 2. 啟動（首次會下載模型，約 3-5 GB，需等待）
 docker compose up -d
 
 # 3. 開啟 Web 介面
 open http://localhost:8000
 ```
+
+> 模型（Demucs / Whisper）首次啟動時自動下載到 `model_cache` volume，之後重啟不需重下。
 
 ---
 
@@ -49,7 +67,7 @@ open http://localhost:8000
 ```bash
 # 1. 系統套件
 sudo apt update
-sudo apt install -y ffmpeg libass-dev fonts-noto-cjk
+sudo apt install -y ffmpeg libass9 fonts-noto-cjk nodejs
 
 # 2. Python 環境
 python3.11 -m venv venv
@@ -63,9 +81,6 @@ pip install -r requirements.txt
 
 # 5. 啟動 API Server
 uvicorn src.server:app --host 0.0.0.0 --port 8000
-
-# 或直接命令列使用（不需 Server）
-python src/pipeline.py "https://www.youtube.com/watch?v=XXXX"
 ```
 
 ---
@@ -91,28 +106,34 @@ python src/pipeline.py "https://..." --job-id my_song_01
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| POST | `/api/process` | 批次啟動處理，回傳 `job_ids` 列表 |
-| GET  | `/api/progress/{job_id}` | SSE 進度串流 |
-| GET  | `/api/download/{job_id}` | 下載完成的 MP4 |
-| GET  | `/auth/status` | 查詢 YouTube 授權狀態 |
-| GET  | `/auth/youtube` | 開始 YouTube OAuth 授權流程 |
-| GET  | `/auth/callback` | OAuth 回呼（Google 自動呼叫） |
+| POST   | `/api/process` | 批次啟動處理，回傳 `job_ids` 列表 |
+| GET    | `/api/progress/{job_id}` | SSE 進度串流 |
+| GET    | `/api/download/{job_id}` | 下載完成的 MP4 |
+| GET    | `/api/history` | 取得歷史記錄（最近 200 筆）|
+| DELETE | `/api/history` | 清除所有歷史記錄 |
+| GET    | `/auth/status` | 查詢 YouTube 授權狀態 |
+| GET    | `/auth/youtube` | 開始 YouTube OAuth 授權流程 |
+| GET    | `/auth/callback` | OAuth 回呼（Google 自動呼叫）|
 
 ### 呼叫範例
 
 ```bash
-# 啟動（支援批次，vocal_mix: 0.0 純伴奏 ~ 1.0 原唱）
+# 批次啟動（vocal_mix: 0.0 純伴奏 ~ 1.0 原唱）
 curl -X POST http://localhost:8000/api/process \
   -H "Content-Type: application/json" \
   -d '{
-    "urls": ["https://www.youtube.com/watch?v=XXXX"],
+    "urls": [
+      "https://www.youtube.com/watch?v=XXXX",
+      "https://www.youtube.com/watch?v=YYYY"
+    ],
     "vocal_mix": 0.0,
+    "subtitle_mode": "auto",
     "auto_upload": false,
     "yt_privacy": "private"
   }'
-# → {"job_ids": ["a1b2c3d4"]}
+# → {"job_ids": ["a1b2c3d4", "e5f6g7h8"]}
 
-# 監聽進度
+# 監聽進度（SSE）
 curl -N http://localhost:8000/api/progress/a1b2c3d4
 
 # 下載
@@ -150,17 +171,15 @@ wget http://localhost:8000/api/download/a1b2c3d4 -O ktv_output.mp4
 mv ~/Downloads/client_secret_xxx.json credentials/client_secrets.json
 ```
 
-> ⚠️ `client_secrets.json` 已列入 `.gitignore`，**不會被 commit 到 Git**。
+> ⚠️ `client_secrets.json` 與 `youtube_token.json` 均已列入 `.gitignore`，**不會被 commit 到 Git**。
 
 ### 4. 連結帳號
 
 重啟容器後，在網頁點選「**連結帳號**」按鈕，完成 Google 授權即可。
 
-授權 token 會儲存在 `credentials/youtube_token.json`（同樣不會上傳到 Git）。
-
 ---
 
-## 字幕樣式說明
+## 字幕說明
 
 字幕採用 **ASS 格式**燒入，KTV 風格設定：
 
@@ -171,17 +190,21 @@ mv ~/Downloads/client_secret_xxx.json credentials/client_secrets.json
 | 位置 | 畫面底部置中 |
 | 陰影 | 2pt 半透明 |
 
+> MV 類影片（畫面本身有歌詞）請選擇「**不加字幕**」模式，避免雙層字幕疊加。
+
 若需自訂字幕樣式，修改 `pipeline.py` 的 `_patch_ass_style()` 函式。
 
 ---
 
-## 處理時間參考（RTX 3080）
+## 處理時間參考（GTX 1060 8GB）
 
 | 影片長度 | 下載 | Demucs | Whisper | FFmpeg | 總計 |
 |----------|------|--------|---------|--------|------|
-| 3 分鐘   | 30s  | 2min   | 40s     | 1min   | ~4min |
-| 5 分鐘   | 45s  | 3.5min | 1min    | 1.5min | ~7min |
-| 10 分鐘  | 1.5min| 7min  | 2min    | 3min   | ~14min |
+| 3 分鐘   | 20s  | 2min   | 1min    | 1min   | ~5min |
+| 5 分鐘   | 30s  | 3min   | 1.5min  | 1.5min | ~7min |
+| 10 分鐘  | 1min | 6min   | 3min    | 3min   | ~14min |
+
+> GPU 排隊機制確保批次處理時不會 OOM，多首歌依序執行。
 
 ---
 
@@ -193,17 +216,14 @@ python -c "import torch; print(torch.cuda.is_available())"
 # 若輸出 False，重新安裝對應 CUDA 版本的 PyTorch
 ```
 
+**Q: Whisper 記憶體不足（OOM）？**
+
+已內建自動降級：`large-v3 CUDA` → `medium CUDA` → `medium CPU`，不需手動調整。
+
 **Q: FFmpeg 字幕燒入失敗（libass 錯誤）？**
 ```bash
-sudo apt install libass-dev
-# 重新編譯或安裝支援 libass 的 ffmpeg
+sudo apt install libass9
 ffmpeg -filters | grep subtitles
-```
-
-**Q: Whisper 記憶體不足？**
-在 `pipeline.py` 中將模型改為 `medium` 或 `small`：
-```python
-model = WhisperModel("medium", device="cuda", compute_type="float16")
 ```
 
 **Q: 字幕亂碼（方塊字）？**
@@ -211,3 +231,7 @@ model = WhisperModel("medium", device="cuda", compute_type="float16")
 sudo apt install fonts-noto-cjk
 fc-cache -f -v
 ```
+
+**Q: 影片下載到一半卡住，跑了幾百首？**
+
+貼入的網址包含播放清單參數（`&list=...`），系統已自動過濾，只會下載單首影片。
