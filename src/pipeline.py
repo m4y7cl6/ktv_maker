@@ -249,7 +249,7 @@ YCbCr Matrix: TV.709
 
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Default,Microsoft JhengHei,58,&H0000FFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,3,2,2,20,20,60,1
+Style: Default,Noto Sans CJK TC,58,&H0000FFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,3,2,2,20,20,60,1
 
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
@@ -390,7 +390,7 @@ def _patch_ass_style(ass_path: Path):
     old_style_line = None
     new_style = (
         "Style: Default,"
-        "Microsoft JhengHei,52,"        # 微軟正黑體 52pt
+        "Noto Sans CJK TC,52,"          # Noto CJK 繁體中文 52pt
         "&H00FFFFFF,"                   # 白色主色
         "&H000000FF,"                   # 藍色次色（KTV 感）
         "&H00000000,"                   # 黑色陰影
