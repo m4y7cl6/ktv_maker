@@ -170,13 +170,12 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
         )
 
     cc = opencc.OpenCC("s2tw")
-    srt_path = job_dir / "subtitle_whisper.srt"
+    ass_path = job_dir / "subtitle_whisper.ass"
 
-    # GPU 優先，OOM 時自動降回 CPU
     configs = [
-        ("large-v3", "cuda",  "int8_float16"),
-        ("medium",   "cuda",  "int8_float16"),
-        ("medium",   "cpu",   "int8"),
+        ("large-v3", "cuda", "int8_float16"),
+        ("medium",   "cuda", "int8_float16"),
+        ("medium",   "cpu",  "int8"),
     ]
     last_err = None
     for model_name, device, compute in configs:
@@ -187,17 +186,27 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
                 str(audio_path),
                 language="zh",
                 beam_size=5,
+                word_timestamps=True,   # 取得每個字的精確時間
                 vad_filter=True,
                 vad_parameters=dict(min_silence_duration_ms=500),
             )
-            with open(srt_path, "w", encoding="utf-8") as f:
-                for i, seg in enumerate(segments, 1):
-                    text = cc.convert(seg.text.strip())
-                    f.write(f"{i}\n")
-                    f.write(f"{_fmt_time(seg.start)} --> {_fmt_time(seg.end)}\n")
-                    f.write(f"{text}\n\n")
-            print(f"  ✓ Whisper 字幕生成完成（{model_name} / {device}）：{srt_path}")
-            return srt_path
+
+            lines = [_ASS_HEADER]
+            for seg in segments:
+                text = cc.convert(seg.text.strip())
+                words = None
+                if seg.words:
+                    words = [
+                        {"word": cc.convert(w.word), "start": w.start, "end": w.end}
+                        for w in seg.words
+                    ]
+                line = _karaoke_body(text, seg.start, seg.end, words)
+                if line:
+                    lines.append(line)
+
+            ass_path.write_text("".join(lines), encoding="utf-8")
+            print(f"  ✓ Whisper 卡拉 OK 字幕完成（{model_name} / {device}）：{ass_path}")
+            return ass_path
         except RuntimeError as e:
             print(f"  ⚠ {model_name}/{device} 失敗：{e}，嘗試下一個設定...")
             last_err = e
@@ -217,6 +226,82 @@ def _fmt_time(seconds: float) -> str:
     m  = int(seconds) // 60 % 60
     h  = int(seconds) // 3600
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def _ass_time(seconds: float) -> str:
+    """浮點秒數 → ASS 時間格式 H:MM:SS.cs"""
+    cs  = int((seconds % 1) * 100)
+    s   = int(seconds) % 60
+    m   = int(seconds) // 60 % 60
+    h   = int(seconds) // 3600
+    return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+
+
+# ASS 檔案標頭：KTV 卡拉 OK 樣式
+# PrimaryColour = 黃色（已唱），SecondaryColour = 白色（未唱）
+_ASS_HEADER = """\
+[Script Info]
+ScriptType: v4.00+
+WrapStyle: 0
+PlayResX: 1920
+PlayResY: 1080
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Default,Microsoft JhengHei,58,&H0000FFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,3,2,2,20,20,60,1
+
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+"""
+
+
+def _karaoke_body(text: str, start: float, end: float, words: list | None) -> str:
+    """組合帶有 \\kf 標籤的 ASS 對話行本文。"""
+    if words:
+        body = ""
+        for w in words:
+            cs = max(1, int((w["end"] - w["start"]) * 100))
+            body += f"{{\\kf{cs}}}{w['word']}"
+    else:
+        chars = list(text)
+        if not chars:
+            return ""
+        cs_each = max(1, int((end - start) * 100 / len(chars)))
+        body = "".join(f"{{\\kf{cs_each}}}{c}" for c in chars)
+    return f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Default,,0,0,0,,{body}\n"
+
+
+def _srt_to_karaoke_ass(srt_path: Path, ass_path: Path) -> None:
+    """將 SRT 字幕轉為 KTV 卡拉 OK ASS，時間平均分配給每個字。"""
+    import re as _re
+    content = srt_path.read_text(encoding="utf-8")
+    blocks = [b.strip() for b in content.strip().split("\n\n") if b.strip()]
+
+    lines = [_ASS_HEADER]
+    time_re = _re.compile(
+        r"(\d+:\d+:\d+[,\.]\d+)\s*-->\s*(\d+:\d+:\d+[,\.]\d+)"
+    )
+    for block in blocks:
+        parts = block.splitlines()
+        if len(parts) < 3:
+            continue
+        m = time_re.search(block)
+        if not m:
+            continue
+        start_s = _srt_time_to_sec(m.group(1))
+        end_s   = _srt_time_to_sec(m.group(2))
+        text    = " ".join(parts[2:]).strip()
+        line = _karaoke_body(text, start_s, end_s, None)
+        if line:
+            lines.append(line)
+    ass_path.write_text("".join(lines), encoding="utf-8")
+
+
+def _srt_time_to_sec(t: str) -> float:
+    t = t.replace(",", ".")
+    h, m, rest = t.split(":")
+    return int(h) * 3600 + int(m) * 60 + float(rest)
 
 
 # ══════════════════════════════════════════════════════════
@@ -244,12 +329,14 @@ def compose_output(
     # 字幕處理（mode=none 或沒有字幕檔時跳過）
     use_subtitle = subtitle_mode == "auto" and subtitle_path and subtitle_path.exists()
     if use_subtitle:
-        ass_path = job_dir / "subtitle.ass"
-        subprocess.run([
-            "ffmpeg", "-y", "-i", str(subtitle_path), str(ass_path)
-        ], check=True, capture_output=True)
-        _patch_ass_style(ass_path)
-        vf = f"scale=-2:1080:flags=lanczos,subtitles={_esc(str(ass_path))}"
+        if subtitle_path.suffix.lower() == ".ass":
+            # Whisper 已產生 karaoke ASS，直接使用
+            final_ass = subtitle_path
+        else:
+            # YouTube SRT → karaoke ASS（時間平均分配每個字）
+            final_ass = job_dir / "subtitle.ass"
+            _srt_to_karaoke_ass(subtitle_path, final_ass)
+        vf = f"scale=-2:1080:flags=lanczos,subtitles={_esc(str(final_ass))}"
     else:
         vf = "scale=-2:1080:flags=lanczos"
     base_args = [
