@@ -6,7 +6,9 @@ KTV Maker Web API
 import asyncio
 import uuid
 import json
+import sqlite3
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse, HTMLResponse
@@ -27,8 +29,51 @@ BASE_DIR   = Path(__file__).parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+DB_PATH = OUTPUT_DIR / "history.db"
+
 # GPU 同一時間只跑一個 job
 job_semaphore = asyncio.Semaphore(1)
+
+
+# ── SQLite 歷史記錄 ──────────────────────────────────────
+def _db() -> sqlite3.Connection:
+    con = sqlite3.connect(DB_PATH)
+    con.row_factory = sqlite3.Row
+    return con
+
+def init_db():
+    with _db() as con:
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS history (
+                job_id        TEXT PRIMARY KEY,
+                title         TEXT,
+                filename      TEXT,
+                output_path   TEXT,
+                yt_url        TEXT,
+                vocal_mix     REAL,
+                subtitle_mode TEXT,
+                created_at    TEXT
+            )
+        """)
+
+def save_history(job_id: str, job: dict):
+    with _db() as con:
+        con.execute("""
+            INSERT OR REPLACE INTO history
+              (job_id, title, filename, output_path, yt_url, vocal_mix, subtitle_mode, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            job_id,
+            job.get("title"),
+            job.get("filename"),
+            job.get("output"),
+            job.get("yt_url"),
+            job.get("vocal_mix", 0.0),
+            job.get("subtitle_mode", "auto"),
+            datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+        ))
+
+init_db()
 
 
 class ProcessRequest(BaseModel):
@@ -107,6 +152,23 @@ async def progress_stream(job_id: str):
             await asyncio.sleep(0.8)
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
+
+@app.get("/api/history")
+async def get_history():
+    with _db() as con:
+        rows = con.execute(
+            "SELECT * FROM history ORDER BY created_at DESC LIMIT 200"
+        ).fetchall()
+    return [
+        {**dict(r), "file_exists": Path(r["output_path"]).exists() if r["output_path"] else False}
+        for r in rows
+    ]
+
+@app.delete("/api/history")
+async def clear_history():
+    with _db() as con:
+        con.execute("DELETE FROM history")
+    return {"ok": True}
 
 @app.get("/api/download/{job_id}")
 async def download_output(job_id: str):
@@ -205,7 +267,10 @@ async def run_pipeline(
                 filename=output.name,
                 title=info["title"],
                 yt_url=yt_url,
+                vocal_mix=vocal_mix,
+                subtitle_mode=subtitle_mode,
             )
+            save_history(job_id, jobs[job_id])
 
         except subprocess.CalledProcessError as e:
             detail = (e.stderr or b"").decode(errors="replace").strip()

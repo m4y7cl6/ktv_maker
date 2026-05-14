@@ -316,6 +316,50 @@
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
 
+    /* ── History ── */
+    #history-section { margin-top: 1.5rem; }
+    .history-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .history-title { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    .btn-clear {
+      font-size: 0.72rem; color: var(--muted);
+      background: none; border: none; cursor: pointer;
+      text-decoration: underline; text-underline-offset: 2px;
+      padding: 0;
+    }
+    .btn-clear:hover { color: var(--error); }
+    #history-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .history-empty { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 1rem 0; }
+
+    .hist-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: border-color 0.2s;
+    }
+    .hist-row:hover { border-color: rgba(255,255,255,0.14); }
+    .hist-row.missing { opacity: 0.45; }
+    .hist-icon { font-size: 1rem; flex-shrink: 0; }
+    .hist-info { flex: 1; min-width: 0; }
+    .hist-title { font-size: 0.84rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hist-meta  { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
+    .hist-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+    .hist-dl, .hist-yt {
+      padding: 0.3rem 0.65rem;
+      border: none; border-radius: 7px;
+      color: #fff; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .hist-dl { background: var(--grad); }
+    .hist-yt { background: var(--yt-red); }
+    .hist-dl:hover, .hist-yt:hover { opacity: 0.82; }
+    .hist-dl.disabled { opacity: 0.3; pointer-events: none; }
+
     /* ── Footer ── */
     footer { margin-top: 2rem; font-size: 0.72rem; color: var(--muted); text-align: center; z-index: 1; position: relative; }
     footer span { margin: 0 0.3rem; opacity: 0.5; }
@@ -417,6 +461,15 @@
         <span id="queue-stats"></span>
       </div>
       <div id="queue-list"></div>
+    </div>
+
+    <!-- 歷史記錄 -->
+    <div id="history-section">
+      <div class="history-header">
+        <span class="history-title">歷史記錄</span>
+        <button class="btn-clear" onclick="clearHistory()">清除全部</button>
+      </div>
+      <div id="history-list"><div class="history-empty">尚無記錄</div></div>
     </div>
 
     <footer>
@@ -694,6 +747,54 @@
     textarea.addEventListener('keydown', e => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) startBatch();
     });
+
+    // ── History ───────────────────────────────────────────
+    async function loadHistory() {
+      try {
+        const r = await fetch('/api/history');
+        const rows = await r.json();
+        renderHistory(rows);
+      } catch {}
+    }
+
+    function renderHistory(rows) {
+      const list = document.getElementById('history-list');
+      if (!rows.length) {
+        list.innerHTML = '<div class="history-empty">尚無記錄</div>';
+        return;
+      }
+      list.innerHTML = rows.map(row => {
+        const missing = !row.file_exists;
+        const meta = [
+          row.created_at,
+          row.vocal_mix > 0 ? `人聲 ${Math.round(row.vocal_mix * 100)}%` : '純伴奏',
+          row.subtitle_mode === 'none' ? '無字幕' : '字幕',
+        ].filter(Boolean).join('　·　');
+
+        return `
+        <div class="hist-row${missing ? ' missing' : ''}">
+          <div class="hist-icon">🎵</div>
+          <div class="hist-info">
+            <div class="hist-title">${row.title || row.filename || row.job_id}</div>
+            <div class="hist-meta">${meta}</div>
+          </div>
+          <div class="hist-actions">
+            <a class="hist-dl${missing ? ' disabled' : ''}"
+               href="/api/download/${row.job_id}" download
+               title="${missing ? '檔案已刪除' : '下載'}">⬇ 下載</a>
+            ${row.yt_url ? `<a class="hist-yt" href="${row.yt_url}" target="_blank">▶ YT</a>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function clearHistory() {
+      if (!confirm('確定要清除所有歷史記錄？')) return;
+      await fetch('/api/history', {method: 'DELETE'});
+      renderHistory([]);
+    }
+
+    loadHistory();
   </script>
 </body>
 </html>
