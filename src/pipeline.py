@@ -172,6 +172,16 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
     cc = opencc.OpenCC("s2tw")
     ass_path = job_dir / "subtitle_whisper.ass"
 
+    # 優先使用 Demucs 分離後的人聲（無背景音樂，辨識率更高）
+    vocals_path = job_dir / "demucs_out" / "htdemucs" / audio_path.stem / "vocals.wav"
+    if vocals_path.exists():
+        whisper_audio = vocals_path
+        use_vad = False  # 純人聲不需要 VAD
+        print(f"  → 使用分離人聲軌道：{vocals_path.name}")
+    else:
+        whisper_audio = audio_path
+        use_vad = True
+
     configs = [
         ("large-v3", "cuda", "int8_float16"),
         ("medium",   "cuda", "int8_float16"),
@@ -183,11 +193,11 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
             print(f"  → 嘗試 Whisper {model_name} on {device} ({compute})")
             model = WhisperModel(model_name, device=device, compute_type=compute)
             segments, _ = model.transcribe(
-                str(audio_path),
+                str(whisper_audio),
                 language="zh",
                 beam_size=5,
-                word_timestamps=True,   # 取得每個字的精確時間
-                vad_filter=True,
+                word_timestamps=True,
+                vad_filter=use_vad,
                 vad_parameters=dict(min_silence_duration_ms=500),
             )
 
@@ -204,8 +214,11 @@ def generate_subtitles_whisper(audio_path: Path, job_dir: Path) -> Path:
                 if line:
                     lines.append(line)
 
+            dialogue_count = len(lines) - 1
             ass_path.write_text("".join(lines), encoding="utf-8")
-            print(f"  ✓ Whisper 卡拉 OK 字幕完成（{model_name} / {device}）：{ass_path}")
+            print(f"  ✓ Whisper 完成（{model_name} / {device}），共 {dialogue_count} 條字幕：{ass_path}")
+            if dialogue_count == 0:
+                print("  ⚠ 警告：未辨識出任何語音，字幕為空")
             return ass_path
         except Exception as e:
             print(f"  ⚠ {model_name}/{device} 失敗：{e}，嘗試下一個設定...")
